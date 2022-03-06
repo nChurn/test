@@ -1,0 +1,55 @@
+version: '3.8'
+
+services:
+  web:
+    build: ./proj
+    command: gunicorn --chdir ./proj --bind 0.0.0.0:8000 proj.wsgi 
+    volumes:
+      - ./proj/:/usr/src/proj/
+    ports:
+      - 8000:8000
+    env_file:
+      - ./proj/.env.dev
+    depends_on:
+      - db
+      - dnmonster
+      - cache
+  db:
+    image: postgres:13.0-alpine
+    volumes:
+      - postgres_data:/var/lib/postgresql/data/
+    environment:
+      - POSTGRES_USER=hello_django
+      - POSTGRES_PASSWORD=hello_django
+      - POSTGRES_DB=hello_django_dev
+
+  cache:
+    image: redis:6.2-alpine
+    restart: always
+    ports:
+      - 6379:6379
+    command: redis-server --save 20 1 --loglevel warning --requirepass eYVX7EwVmmxKPCDmwMtyKVge8oLd2t81
+    volumes:
+      - cache:/data
+
+  dnmonster:
+    build: ./dnmonster
+    command: npm start
+      - ./dnmonster:/usr/src/dnmonster
+    ports:
+      - 8080:8080
+  nginx:
+    image: nginx:1.19.0-alpine
+    ports:
+      - "80:80"
+    volumes:
+      - nginx_conf:/etc/nginx/conf.d/
+    depends_on:
+      - web
+    restart: always
+
+volumes:
+  postgres_data:
+  dnmonster:
+  cache:
+    driver: local
